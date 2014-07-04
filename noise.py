@@ -4,6 +4,7 @@ import math
 import random
 import string
 import collections
+import operator
 from itertools import *
 
 def white(N):
@@ -40,24 +41,27 @@ def pinkletters_to_file(iterpink, N=10000):
 		for ff in n:
 			f.write("%s" % ff[-1])
 
-def pinkwords_to_file(iterpink, N=2500):
+def pinkwords_to_file(iterpink, N=200):
 	#try first-order markov chain first, and then 3rd-order
 	#the third-order one may take a while
 	print "beginning parsing of corpus..."
 	ct = collections.Counter()
 	with open("total_corpus.txt", "r") as corpus:
 		for line in corpus:
-			for word in line.split():
+			line_processed = line.lower().translate(string.maketrans("",""), string.punctuation).split()
+			for word in line_processed:
 				ct[word] += 1
-	markov_array = stuff #do more dimensions by fairly obvious way
-	word_array = stuff #do more dimensions by fairly obvious way
-	print "beginning generation..."
-	n = list(islice(markov_word_iterpink(markov_array, word_array, 40), N))
+	markov_list = ct.items()
+	markov_array = map(operator.itemgetter(1), markov_list)
+	normalizer = math.log(sum(markov_array))
+	markov_array = numpy.array(map(lambda x: math.exp(math.log(x) - normalizer), markov_array))
+	word_array = map(operator.itemgetter(0), markov_list)
+	print markov_array
+	print "finished corpus fuckery. beginning generation..."
+	n = list(islice(iterpink(markov_array, word_array), N))
 	print "generated, starting the write..."
 	with open('pinknoise_markov_words.txt', 'w') as f:
-		for ff in n:
-			f.write("%s" % ff[-1])
-
+		f.write(" ".join(n))
 
 def markov_word_iterpink(markov_array, word_array, depth=20):
 	prior = markov_array
@@ -164,10 +168,7 @@ def markov_letter_iterpink_uniform(depth=20):
 		val_sum += source[i] - values[c] #take abs
 		values[c] = source[i] #do right dimension
 
-def markov_word_iterpink(depth=20):
-
-
 if __name__ == "__main__":
 	#pinknoise_to_file(float_iterpink)
 	#pinkletters_to_file(markov_letter_iterpink)
-	pinkwordss_to_file(markov_word_iterpink)
+	pinkwords_to_file(markov_word_iterpink)
