@@ -3,6 +3,7 @@ import scipy
 import math
 import random
 import string
+import collections
 from itertools import *
 
 def white(N):
@@ -17,26 +18,6 @@ def brown(N):
 #one-dimensional only
 def pink(N, iterpink, depth=80):
 	return list(islice(iterpink(depth), N))
-
-def float_iterpink(depth=20):
-	values = numpy.random.randn(depth)
-	smooth = numpy.random.randn(depth)
-	source = numpy.random.randn(depth)
-	sum = values.sum()
-	i = 0
-	while True:
-		yield sum + smooth[i]
-		i += 1
-		if i == depth:
-			i = 0
-			smooth = numpy.random.randn(depth)
-			source = numpy.random.randn(depth)
-			continue
-		c = 0
-		while not (i >> c) & 1: #count trailing zeroes
-			c += 1
-		sum += source[i] - values[c]
-		values[c] = source[i]
 
 def pinknoise_to_file(iterpink, N=10000):
 	print "beginning..."
@@ -58,6 +39,73 @@ def pinkletters_to_file(iterpink, N=10000):
 	with open('pinknoise_markov_letters.txt', 'w') as f:
 		for ff in n:
 			f.write("%s" % ff[-1])
+
+def pinkwords_to_file(iterpink, N=2500):
+	#try first-order markov chain first, and then 3rd-order
+	#the third-order one may take a while
+	print "beginning parsing of corpus..."
+	ct = collections.Counter()
+	with open("total_corpus.txt", "r") as corpus:
+		for line in corpus:
+			for word in line.split():
+				ct[word] += 1
+	markov_array = stuff #do more dimensions by fairly obvious way
+	word_array = stuff #do more dimensions by fairly obvious way
+	print "beginning generation..."
+	n = list(islice(markov_word_iterpink(markov_array, word_array, 40), N))
+	print "generated, starting the write..."
+	with open('pinknoise_markov_words.txt', 'w') as f:
+		for ff in n:
+			f.write("%s" % ff[-1])
+
+
+def markov_word_iterpink(markov_array, word_array, depth=20):
+	prior = markov_array
+	dirichlet_draw = numpy.random.dirichlet(prior)
+	#draw a multinomial from the dirichlet
+	#write it out in a matrix, everybody, to find the right axes for numpy calc
+	values = [numpy.random.dirichlet(prior) for i in xrange(depth)]
+	smooth = [numpy.random.dirichlet(prior) for i in xrange(depth)]
+	source = [numpy.random.dirichlet(prior) for i in xrange(depth)]
+	val_sum = sum(values) #across the right dimension
+	i = 0
+	while True:
+		probs = abs(val_sum + smooth[i]) / sum(abs(val_sum + smooth[i]))
+		yield numpy.random.choice(word_array, p=probs)
+		#yield a sample from the distribution, actually
+		#there's a numpy thing for this
+		i += 1
+		if i == depth:
+			i = 0
+			#natural place to do a beyesian inference thingy
+			smooth = [numpy.random.dirichlet(prior) for i in xrange(depth)]
+			source = [numpy.random.dirichlet(prior) for i in xrange(depth)]
+			continue
+		c = 0
+		while not (i >> c) & 1: #count trailing zeroes
+			c += 1
+		val_sum += source[i] - values[c] #take abs
+		values[c] = source[i] #do right dimension
+
+def float_iterpink(depth=20):
+	values = numpy.random.randn(depth)
+	smooth = numpy.random.randn(depth)
+	source = numpy.random.randn(depth)
+	sum = values.sum()
+	i = 0
+	while True:
+		yield sum + smooth[i]
+		i += 1
+		if i == depth:
+			i = 0
+			smooth = numpy.random.randn(depth)
+			source = numpy.random.randn(depth)
+			continue
+		c = 0
+		while not (i >> c) & 1: #count trailing zeroes
+			c += 1
+		sum += source[i] - values[c]
+		values[c] = source[i]
 
 def markov_letter_iterpink(depth=20):
 	#8.167% a's, 1.492% b's, etc
@@ -116,6 +164,10 @@ def markov_letter_iterpink_uniform(depth=20):
 		val_sum += source[i] - values[c] #take abs
 		values[c] = source[i] #do right dimension
 
+def markov_word_iterpink(depth=20):
+
+
 if __name__ == "__main__":
-	pinknoise_to_file(float_iterpink)
-	pinkletters_to_file(markov_letter_iterpink)
+	#pinknoise_to_file(float_iterpink)
+	#pinkletters_to_file(markov_letter_iterpink)
+	pinkwordss_to_file(markov_word_iterpink)
