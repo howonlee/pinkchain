@@ -1,4 +1,5 @@
 import numpy
+import scipy
 import math
 import random
 import string
@@ -59,64 +60,30 @@ def pinkletters_to_file(iterpink, N=10000):
 			f.write("%s" % ff[-1])
 
 def markov_letter_iterpink(depth=20):
-	"""
-	all of these are random choices from the alphabet instead of something else
-	only use the dataset afterwards, to sample randomly from
-	the dataset distribution instead of something else
-
-	Args:
-		dataset: The dataset to the 1st-order markov chain as,, as a dictionary
-	Kwargs:
-		depth: The depth of the signal filter
-	"""
-	#maybe I do want distributions, this doesn't not make sense
-	values = [random.choice(string.ascii_lowercase) for n in xrange(depth)]
-	smooth = [random.choice(string.ascii_lowercase) for n in xrange(depth)]
-	source = [random.choice(string.ascii_lowercase) for n in xrange(depth)]
-	#basically, I have to find an analogue to addition for strings
-	#concatenations? sure, try it, see how it fucks up, it's temporary and specific
-	#this is a weird hybrid of concatenations and other stuff
-	sum = "".join(values)
+	num_letters = 26
+	#write it out in a matrix, everybody, to find the right axes for numpy calc
+	letters_array = numpy.array(list(string.ascii_lowercase))
+	values = [numpy.random.randn(num_letters) for i in xrange(depth)]
+	smooth = [numpy.random.randn(num_letters) for i in xrange(depth)]
+	source = [numpy.random.randn(num_letters) for i in xrange(depth)]
+	val_sum = sum(values) #across the right dimension
 	i = 0
 	while True:
-		yield sum + smooth[i]
+		probs = abs(val_sum + smooth[i]) / sum(abs(val_sum + smooth[i]))
+		yield numpy.random.choice(letters_array, p=probs)
+		#yield a sample from the distribution, actually
+		#there's a numpy thing for this
 		i += 1
 		if i == depth:
 			i = 0
-			smooth = [random.choice(string.ascii_lowercase) for n in xrange(depth)]
-			source = [random.choice(string.ascii_lowercase) for n in xrange(depth)]
+			smooth = [numpy.random.randn(num_letters) for i in xrange(depth)]
+			source = [numpy.random.randn(num_letters) for i in xrange(depth)]
 			continue
 		c = 0
 		while not (i >> c) & 1: #count trailing zeroes
 			c += 1
-		sum += chr(abs(ord(source[i]) - ord(values[c]))) ##minus?
-		values[c] = source[i]
-
-def markov_word_iterpink(depth=20):
-	"""
-	Args:
-		dataset: The dataset to the 1st-order markov chain as,, as a dictionary
-	Kwargs:
-		depth: The depth of the signal filter
-	"""
-	values = numpy.random.randn(depth)
-	smooth = numpy.random.randn(depth)
-	source = numpy.random.randn(depth)
-	sum = values.sum()
-	i = 0
-	while True:
-		yield sum + smooth[i]
-		i += 1
-		if i == depth:
-			i = 0
-			smooth = numpy.random.randn(depth)
-			source = numpy.random.randn(depth)
-			continue
-		c = 0
-		while not (i >> c) & 1: #count trailing zeroes
-			c += 1
-		sum += source[i] - values[c]
-		values[c] = source[i]
+		val_sum += source[i] - values[c] #take abs
+		values[c] = source[i] #do right dimension
 
 if __name__ == "__main__":
 	pinknoise_to_file(float_iterpink)
