@@ -21,6 +21,9 @@ def pink(N, iterpink, depth=80):
 	return list(islice(iterpink(depth), N))
 
 def markov_word_iterpink(markov_array, word_array, depth=20):
+	"""
+	I think that this can also be used for the semimarkov model
+	"""
 	prior = markov_array
 	dirichlet_draw = numpy.random.dirichlet(prior)
 	#draw a multinomial from the dirichlet
